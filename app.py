@@ -89,9 +89,9 @@ def redirect(path):
 @app.route('/test/<path:path>', methods=['GET', 'PUT', 'POST'])
 def test(path):
     if request.method == 'PUT' or request.method == 'POST':
-        print(request.method, request.path, request.query_string, request.get_data())
+        print("got:", request.method, request.path, request.query_string, request.get_data())
     else:
-        print(request.method, request.path, request.query_string)
+        print("got:", request.method, request.path, request.query_string)
     return "ok\n"
 
 
