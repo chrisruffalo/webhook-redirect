@@ -1,0 +1,8 @@
+# no python stuff
+static
+templates
+venv
+
+# no idea stuff
+.idea
+__pycache__/

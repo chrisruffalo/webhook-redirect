@@ -1,0 +1,13 @@
+# base url to redirect to
+base_url: http://localhost:5000/test
+# list of redirect configurations
+redirects:
+  # match project by exact name
+  - match: "Project Next/Project API/build"
+    # list of parameters to map from json payload
+    params:
+        # name of the parameter to map the json value to
+      - name: BRANCH
+        # the json path to the parameter
+        path: $.gitlabSourceBranch
+
