@@ -33,6 +33,8 @@ with open("redirect.yml", "r") as ymlfile:
         compiled[match] = re.compile(match)
 
 
+# any request (except to the test path) is treated as a single parameter that will
+# be proxied to the target base url
 @app.route('/', defaults={'path': ''}, methods=['GET', 'PUT', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'PUT', 'POST'])
 def redirect(path):
