@@ -5,6 +5,7 @@
 ###############
 from flask import Flask, request
 from yaml import load
+
 try:
     from yaml import CLoader as Loader
 except ImportError:
@@ -23,8 +24,12 @@ compiled = {}
 base_urls = {}
 urls = {}
 
+# cache the path -> remote path and path -> found_params mapping
+cache = {}
+params_cache = {}
 
-# chop the end off of a string if that end is a slash
+
+# chop the end off of a URL if that end is a slash
 def fix(url):
     if url.endswith("/"):
         url = url[0:-1]
@@ -41,9 +46,11 @@ with open("redirect.yml", "r") as ymlfile:
         if 'base_url' in r and 'url' in r:
             raise Exception("A base_url or a url must be specified, not both (match string: " + match + ")")
         if 'base_url' in r:
+            # we fix the base_url because we are going to concat that later
             base_urls[match] = fix(r['base_url'])
         if 'url' in r:
-            urls[match] = fix(r['url'])
+            # we do not fix this url because we are giving control of that to the user
+            urls[match] = r['url']
 
 
 # any request (except to the test path) is treated as a single parameter that will
@@ -56,24 +63,33 @@ def redirect(path):
 
     # get the decoded version of the path for matching
     decoded_path = urllib.parse.unquote(path)
+    remote_path = None
 
     # add request args first so they can be overwritten
     if request.args:
         for k in request.args:
             redirected_params[k] = request.args[k]
 
-    # match url
-    for url_match in params:
-        c = compiled[url_match]
-        # use the compiled matcher against the decoded path and the encoded path to prevent surprises
-        if c.match(decoded_path) or c.match(path):
-            found_params = params[url_match]
-            if url_match in base_urls:
-                remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
-                break
-            elif url_match in urls:
-                remote_path = urls[url_match]
-                break
+    if path in cache:
+        remote_path = cache[path]
+        found_params = params_cache[path]
+    else:
+        # match url
+        for url_match in params:
+            c = compiled[url_match]
+            # use the compiled matcher against the decoded path and the encoded path to prevent surprises
+            if c.match(decoded_path) or c.match(path):
+                found_params = params[url_match]
+                params_cache[path] = found_params
+                if url_match in base_urls:
+                    remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
+                    break
+                elif url_match in urls:
+                    remote_path = urls[url_match]
+                    break
+        if remote_path is not None:
+            # update cache
+            cache[path] = remote_path
 
     if not remote_path:
         print("no match found for path: '" + decoded_path + "'")
@@ -101,7 +117,8 @@ def redirect(path):
     if 'GET' == request.method:
         new_request = requests.request(request.method, remote_path, headers=request.headers, params=redirected_params)
     else:
-        new_request = requests.request(request.method, remote_path, data=request.get_data(), headers=request.headers, params=redirected_params)
+        new_request = requests.request(request.method, remote_path, data=request.get_data(), headers=request.headers,
+                                       params=redirected_params)
 
     # just return content for now (status code needs to be next)
     return new_request.content, new_request.status_code
