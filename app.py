@@ -90,6 +90,7 @@ def redirect(path):
 
     if path in cache:
         remote_path = cache[path]
+        print("cached match '" + path + "' to target " + remote_path)
         if path in found_params:
             found_params = params_cache[path]
         else:
@@ -114,9 +115,11 @@ def redirect(path):
                     method_cache[path] = methods[path]
                 if url_match in base_urls:
                     remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
+                    print("matching '" + path + "' to base_url + path = " + remote_path)
                     break
                 elif url_match in urls:
                     remote_path = urls[url_match]
+                    print("matching '" + path + "' to url " + remote_path)
                     break
         if remote_path is not None:
             # update cache
@@ -147,7 +150,7 @@ def redirect(path):
             redirected_params[k] = fixed_params[k]
 
     # log request
-    print("forwarding:", request.method, remote_path, request.query_string, request.get_data())
+    print("forwarding:", request.method, remote_path, redirected_params, request.get_data())
 
     # build out http request, if it is a get request no need to send a payload
     try:

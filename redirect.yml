@@ -39,3 +39,21 @@ redirects:
       # the json path to the parameter
       path: $.gitlabSourceBranch
 
+  # match path by regex
+  - match: "rebuild"
+    # url can be specified or base url, not both
+    # if base_url is set the matched path is appended to the base url
+    # and a request is made to the new url
+    #base_url: http://localhost:5000/test
+    # if a url is set the request goes directly to that url with no
+    # reference to the original path
+    url: http://remote:5050/build
+    # list of fixed parameters to pass to endpoint
+    fixed:
+      token: abcdefg
+    # list of parameters to map from json payload
+    dynamic:
+      # name of the parameter to map the json value to
+    - name: BRANCH
+      # the json path to the parameter
+      path: $.gitlabSourceBranch
