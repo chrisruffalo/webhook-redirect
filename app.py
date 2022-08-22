@@ -88,10 +88,9 @@ def redirect(path):
         c = compiled[url_match]
         # use the compiled matcher against the decoded path and the encoded path to prevent surprises
         if c.match(decoded_path) or c.match(path):
-            found_params = params[url_match]
-            fixed_params = fixed[url_match]
-            if path in methods:
-                method = methods[path]
+            found_params = params[url_match] if url_match in params else {}
+            fixed_params = fixed[url_match] if url_match in fixed else {}
+            method = methods[path] if path in methods else request.method
             if url_match in base_urls:
                 remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
                 print("matching '" + path + "' to base_url + path = " + remote_path)
