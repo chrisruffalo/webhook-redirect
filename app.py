@@ -15,6 +15,7 @@ import json
 from jsonpath_rw import parse
 import re
 import urllib.parse
+from urllib.parse import urlparse
 import requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -156,19 +157,20 @@ def redirect(path):
 
     # log request
     redirected_data = {} if 'GET' == method else request.get_data()
-    print("forwarding:", method, remote_path, redirected_params, redirected_data)
+    url = urlparse(remote_path)
+    print("forwarding:", method, url.geturl(), redirected_params, redirected_data)
 
     # build out http request, if it is a get request no need to send a payload
     try:
         if 'GET' == method:
-            new_request = requests.request(method, remote_path, headers=request.headers, params=redirected_params,
+            new_request = requests.request(method, url.geturl(), headers=request.headers, params=redirected_params,
                                            verify=False)
         else:
-            new_request = requests.request(method, remote_path, data=redirected_data, headers=request.headers,
+            new_request = requests.request(method, url.geturl(), data=redirected_data, headers=request.headers,
                                            params=redirected_params, verify=False)
     except Exception:
-        print("failed to contact remote path: '" + remote_path + "'")
-        return "error forwarding request to '" + remote_path + "'", 500
+        print("failed to contact remote path: '" + url.geturl() + "'")
+        return "error forwarding request to '" + url.geturl() + "'", 500
 
     # just return content for now (status code needs to be next)
     return new_request.content, new_request.status_code

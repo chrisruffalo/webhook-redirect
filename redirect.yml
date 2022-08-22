@@ -47,7 +47,7 @@ redirects:
     #base_url: http://localhost:5000/test
     # if a url is set the request goes directly to that url with no
     # reference to the original path
-    url: https://remote/job/Project%20Next/job/Project%20API/job/build-deploy/buildWithParameters
+    url: https://google.com/job/Project%20Next/job/Project%20API/job/build-deploy/buildWithParameters
     method: POST
     # list of fixed parameters to pass to endpoint
     fixed:
