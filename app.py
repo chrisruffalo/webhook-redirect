@@ -29,12 +29,6 @@ base_urls = {}
 urls = {}
 methods = {}
 
-# cache the path -> remote path and path -> found_params mapping
-cache = {}
-params_cache = {}
-fixed_cache = {}
-method_cache = {}
-
 
 # chop the end off of a URL if that end is a slash
 def fix(url):
@@ -89,43 +83,23 @@ def redirect(path):
         for k in request.args:
             redirected_params[k] = request.args[k]
 
-    if path in cache:
-        remote_path = cache[path]
-        print("cached match '" + path + "' to target " + remote_path)
-        if path in found_params:
-            found_params = params_cache[path]
-        else:
-            found_params = {}
-        if path in fixed_cache:
-            fixed_params = fixed_cache[path]
-        else:
-            fixed_params = {}
-        if path in method_cache:
-            method = method_cache[path]
-    else:
-        # match url
-        for url_match in params:
-            c = compiled[url_match]
-            # use the compiled matcher against the decoded path and the encoded path to prevent surprises
-            if c.match(decoded_path) or c.match(path):
-                found_params = params[url_match]
-                fixed_params = fixed[url_match]
-                params_cache[path] = found_params
-                fixed_cache[path] = fixed_params
-                if path in methods:
-                    method_cache[path] = methods[path]
-                    method = methods[path]
-                if url_match in base_urls:
-                    remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
-                    print("matching '" + path + "' to base_url + path = " + remote_path)
-                    break
-                elif url_match in urls:
-                    remote_path = urls[url_match]
-                    print("matching '" + path + "' to url " + remote_path)
-                    break
-        if remote_path is not None:
-            # update cache
-            cache[path] = remote_path
+    # match url
+    for url_match in params:
+        c = compiled[url_match]
+        # use the compiled matcher against the decoded path and the encoded path to prevent surprises
+        if c.match(decoded_path) or c.match(path):
+            found_params = params[url_match]
+            fixed_params = fixed[url_match]
+            if path in methods:
+                method = methods[path]
+            if url_match in base_urls:
+                remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
+                print("matching '" + path + "' to base_url + path = " + remote_path)
+                break
+            elif url_match in urls:
+                remote_path = urls[url_match]
+                print("matching '" + path + "' to url " + remote_path)
+                break
 
     if not remote_path:
         print("no match found for path: '" + decoded_path + "'")
