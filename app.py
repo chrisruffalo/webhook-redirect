@@ -172,6 +172,8 @@ def redirect(path):
         print("failed to contact remote path: '" + url.geturl() + "'")
         return "error forwarding request to '" + url.geturl() + "'", 500
 
+    print("remote '" + url.geturl() + "' responded with code=" + str(new_request.status_code) + ", content= " + str(new_request.content))
+
     # just return content for now (status code needs to be next)
     return new_request.content, new_request.status_code
 
