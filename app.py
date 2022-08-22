@@ -3,6 +3,7 @@
 # it modifies the requests some in flight to try and ensure that additional values can be turned into
 # (query) parameters.
 ###############
+import urllib3
 from flask import Flask, request
 from yaml import load
 
@@ -15,6 +16,7 @@ from jsonpath_rw import parse
 import re
 import urllib.parse
 import requests
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
@@ -24,11 +26,13 @@ fixed = {}
 compiled = {}
 base_urls = {}
 urls = {}
+methods = {}
 
 # cache the path -> remote path and path -> found_params mapping
 cache = {}
 params_cache = {}
 fixed_cache = {}
+method_cache = {}
 
 
 # chop the end off of a URL if that end is a slash
@@ -45,11 +49,13 @@ with open("redirect.yml", "r") as ymlfile:
         if 'match' not in r:
             raise Exception("A match must be specified for a redirect instance")
         match = r['match']
+        compiled[match] = re.compile(match)
         if 'dynamic' in r:
             params[match] = r['dynamic']
         if 'fixed' in r:
             fixed[match] = r['fixed']
-        compiled[match] = re.compile(match)
+        if 'method' in r:
+            methods[match] = r['method']
         if 'base_url' in r and 'url' in r:
             raise Exception("A base_url or a url must be specified, not both (match string: " + match + ")")
         elif 'base_url' in r:
@@ -75,6 +81,7 @@ def redirect(path):
     # get the decoded version of the path for matching
     decoded_path = urllib.parse.unquote(path)
     remote_path = None
+    method = request.method
 
     # add request args first so they can be overwritten
     if request.args:
@@ -91,6 +98,8 @@ def redirect(path):
             fixed_params = fixed_cache[path]
         else:
             fixed_params = {}
+        if path in method_cache:
+            method = method_cache[path]
     else:
         # match url
         for url_match in params:
@@ -101,6 +110,8 @@ def redirect(path):
                 fixed_params = fixed[url_match]
                 params_cache[path] = found_params
                 fixed_cache[path] = fixed_params
+                if path in methods:
+                    method_cache[path] = methods[path]
                 if url_match in base_urls:
                     remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
                     break
@@ -139,11 +150,19 @@ def redirect(path):
     print("forwarding:", request.method, remote_path, request.query_string, request.get_data())
 
     # build out http request, if it is a get request no need to send a payload
-    if 'GET' == request.method:
-        new_request = requests.request(request.method, remote_path, headers=request.headers, params=redirected_params)
-    else:
-        new_request = requests.request(request.method, remote_path, data=request.get_data(), headers=request.headers,
-                                       params=redirected_params)
+    try:
+        if 'GET' == method:
+            new_request = requests.request(method, remote_path, headers=request.headers, params=redirected_params,
+                                           verify=False)
+        else:
+            # only pass through the original data if original data was present (not doing method bending)
+            original_data = "{}"
+            if 'GET' != request.method:
+                original_data = request.get_data()
+            new_request = requests.request(method, remote_path, data=original_data, headers=request.headers,
+                                           params=redirected_params, verify=False)
+    except Exception:
+        return "error forwarding request to '" + remote_path + "'", 500
 
     # just return content for now (status code needs to be next)
     return new_request.content, new_request.status_code
