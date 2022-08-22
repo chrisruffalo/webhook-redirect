@@ -40,14 +40,15 @@ redirects:
       path: $.gitlabSourceBranch
 
   # match path by regex
-  - match: "rebuild"
+  - match: project-next/project-api/build
     # url can be specified or base url, not both
     # if base_url is set the matched path is appended to the base url
     # and a request is made to the new url
     #base_url: http://localhost:5000/test
     # if a url is set the request goes directly to that url with no
     # reference to the original path
-    url: http://remote:5050/build
+    url: https://remote/job/Project%20Next/job/Project%20API/job/build-deploy/buildWithParameters
+    method: POST
     # list of fixed parameters to pass to endpoint
     fixed:
       token: abcdefg

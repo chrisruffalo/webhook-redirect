@@ -113,6 +113,7 @@ def redirect(path):
                 fixed_cache[path] = fixed_params
                 if path in methods:
                     method_cache[path] = methods[path]
+                    method = methods[path]
                 if url_match in base_urls:
                     remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
                     print("matching '" + path + "' to base_url + path = " + remote_path)
@@ -128,6 +129,10 @@ def redirect(path):
     if not remote_path:
         print("no match found for path: '" + decoded_path + "'")
         return "no match for path", 404
+
+    # if a configured method has leaked through that isn't a real method then use the original method
+    if method != 'GET' and method != 'POST' and method != 'PUT':
+        method = request.method
 
     # if a payload was provided we need build parameters from the (hopefully json) payload
     if request.method == 'POST' or request.method == 'PUT':
@@ -150,7 +155,8 @@ def redirect(path):
             redirected_params[k] = fixed_params[k]
 
     # log request
-    print("forwarding:", request.method, remote_path, redirected_params, request.get_data())
+    redirected_data = {} if 'GET' == method else request.get_data()
+    print("forwarding:", method, remote_path, redirected_params, redirected_data)
 
     # build out http request, if it is a get request no need to send a payload
     try:
@@ -158,13 +164,10 @@ def redirect(path):
             new_request = requests.request(method, remote_path, headers=request.headers, params=redirected_params,
                                            verify=False)
         else:
-            # only pass through the original data if original data was present (not doing method bending)
-            original_data = "{}"
-            if 'GET' != request.method:
-                original_data = request.get_data()
-            new_request = requests.request(method, remote_path, data=original_data, headers=request.headers,
+            new_request = requests.request(method, remote_path, data=redirected_data, headers=request.headers,
                                            params=redirected_params, verify=False)
     except Exception:
+        print("failed to contact remote path: '" + remote_path + "'")
         return "error forwarding request to '" + remote_path + "'", 500
 
     # just return content for now (status code needs to be next)
