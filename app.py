@@ -20,6 +20,7 @@ app = Flask(__name__)
 
 # storage for configuration items
 params = {}
+fixed = {}
 compiled = {}
 base_urls = {}
 urls = {}
@@ -27,6 +28,7 @@ urls = {}
 # cache the path -> remote path and path -> found_params mapping
 cache = {}
 params_cache = {}
+fixed_cache = {}
 
 
 # chop the end off of a URL if that end is a slash
@@ -40,17 +42,24 @@ def fix(url):
 with open("redirect.yml", "r") as ymlfile:
     cfg = load(ymlfile, Loader=Loader)
     for r in cfg['redirects']:
+        if 'match' not in r:
+            raise Exception("A match must be specified for a redirect instance")
         match = r['match']
-        params[match] = r['params']
+        if 'dynamic' in r:
+            params[match] = r['dynamic']
+        if 'fixed' in r:
+            fixed[match] = r['fixed']
         compiled[match] = re.compile(match)
         if 'base_url' in r and 'url' in r:
             raise Exception("A base_url or a url must be specified, not both (match string: " + match + ")")
-        if 'base_url' in r:
+        elif 'base_url' in r:
             # we fix the base_url because we are going to concat that later
             base_urls[match] = fix(r['base_url'])
-        if 'url' in r:
+        elif 'url' in r:
             # we do not fix this url because we are giving control of that to the user
             urls[match] = r['url']
+        else:
+            raise Exception("A base_url or a url must be specified but none found")
 
 
 # any request (except to the test path) is treated as a single parameter that will
@@ -60,6 +69,8 @@ with open("redirect.yml", "r") as ymlfile:
 def redirect(path):
     # this is the dict that will store the params that will be sent to the consuming service
     redirected_params = {}
+    found_params = {}
+    fixed_params = {}
 
     # get the decoded version of the path for matching
     decoded_path = urllib.parse.unquote(path)
@@ -72,7 +83,14 @@ def redirect(path):
 
     if path in cache:
         remote_path = cache[path]
-        found_params = params_cache[path]
+        if path in found_params:
+            found_params = params_cache[path]
+        else:
+            found_params = {}
+        if path in fixed_cache:
+            fixed_params = fixed_cache[path]
+        else:
+            fixed_params = {}
     else:
         # match url
         for url_match in params:
@@ -80,7 +98,9 @@ def redirect(path):
             # use the compiled matcher against the decoded path and the encoded path to prevent surprises
             if c.match(decoded_path) or c.match(path):
                 found_params = params[url_match]
+                fixed_params = fixed[url_match]
                 params_cache[path] = found_params
+                fixed_cache[path] = fixed_params
                 if url_match in base_urls:
                     remote_path = base_urls[url_match] + "/" + urllib.parse.quote(decoded_path)
                     break
@@ -109,6 +129,11 @@ def redirect(path):
                 found_value = parse(param_json_path).find(payload)
                 if found_value and found_value[0] and found_value[0].value:
                     redirected_params[param_key] = found_value[0].value
+
+    # copy fixed params into map
+    if fixed_params:
+        for k in fixed_params:
+            redirected_params[k] = fixed_params[k]
 
     # log request
     print("forwarding:", request.method, remote_path, request.query_string, request.get_data())

@@ -10,12 +10,15 @@ redirects:
     # if a url is set the request goes directly to that url with no
     # reference to the original path
     url: http://localhost:5000/test/project_next/build
+    # list of fixed parameters to pass to endpoint
+    fixed:
+      token: abcdefg
     # list of parameters to map from json payload
-    params:
-        # name of the parameter to map the json value to
-      - name: BRANCH
-        # the json path to the parameter
-        path: $.gitlabSourceBranch
+    dynamic:
+      # name of the parameter to map the json value to
+    - name: BRANCH
+      # the json path to the parameter
+      path: $.gitlabSourceBranch
 
   # match path by regex
   - match: "Project Next/Project API/remove"
@@ -26,10 +29,13 @@ redirects:
     # if a url is set the request goes directly to that url with no
     # reference to the original path
     #url: https://localhost:5000/test/project_next/build
+    # list of fixed parameters to pass to endpoint
+    fixed:
+      token: 123456
     # list of parameters to map from json payload
-    params:
-        # name of the parameter to map the json value to
-      - name: BRANCH
-        # the json path to the parameter
-        path: $.gitlabSourceBranch
+    dynamic:
+      # name of the parameter to map the json value to
+    - name: BRANCH
+      # the json path to the parameter
+      path: $.gitlabSourceBranch
 
